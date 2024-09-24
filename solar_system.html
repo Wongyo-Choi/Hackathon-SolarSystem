@@ -1,0 +1,524 @@
+<html>
+    <head>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+
+            /* Style for the top bar */
+            .top-bar {
+                width: 100%;
+                height: 50px;
+                background-color: #333; /* Dark background for the bar */
+                color: white;
+                display: flex;
+                align-items: center;
+                padding: 0 20px;
+                box-sizing: border-box;
+                position: absolute;
+                top: 0;
+                z-index: 1000;
+            }
+
+            .title {
+                flex-grow: 1; /* Allows the title to take up available space pushing the FAQ to the right */
+                font-size: 24px;
+            }
+
+            .faq-button {
+                background-color: #555;
+                border: none;
+                padding: 10px 20px;
+                cursor: pointer;
+                border-radius: 5px;
+            }
+
+            /* Styles for the overlay and iframe */
+            .overlay {
+                display: none; /* Hidden by default */
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8); /* Black background with opacity */
+                z-index: 2000;
+            }
+
+            .iframe-container {
+                width: 80%;
+                height: 80%;
+                position: absolute;
+                top: 10%; /* Centered vertically */
+                left: 10%; /* Centered horizontally */
+            }
+
+            iframe {
+                width: 100%;
+                height: 100%;
+                border: none; /* Removes the default border */
+            }
+
+            .close-btn {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                font-size: 30px;
+                font-weight: bold;
+                color: white;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="top-bar">
+            <div class="title">Solar System</div>
+            <button class="faq-button">FAQ</button>
+        </div>
+    
+        <!-- Overlay for the FAQ page -->
+        <div class="overlay" id="faqOverlay">
+            <div class="iframe-container">
+                <span class="close-btn">&times;</span>
+                <iframe src="https://example.com/faq"></iframe> <!-- Replace with your actual FAQ page URL -->
+            </div>
+        </div>
+
+        <script type = "module">
+            
+            // Import necessary Three.js modules and OrbitControls to create and control the scene
+            import * as THREE from "https://web.cs.manchester.ac.uk/three/three.js-master/build/three.module.js";
+            import { OrbitControls } from "https://web.cs.manchester.ac.uk/three/three.js-master/examples/jsm/controls/OrbitControls.js";
+
+            document.addEventListener('DOMContentLoaded', (event) => {
+                const faqButton = document.querySelector('.faq-button');
+                const faqOverlay = document.getElementById('faqOverlay');
+                const closeButton = document.querySelector('.close-btn');
+
+                faqButton.addEventListener('click', () => {
+                    faqOverlay.style.display = 'block';
+                });
+
+                closeButton.addEventListener('click', () => {
+                    faqOverlay.style.display = 'none';
+                });
+            });
+
+
+            // Declaration of variables for scene, camera, renderer, geometries, materials, meshes, system group, curve, and controls
+            var scene, camera, renderer;
+            var sunGeometry, sunMaterial, sunMesh;
+            var earthGeometry, earthMaterial, earthMesh;
+            var moonGeometry, moonMaterial, moonMesh;
+            var cloudGeometry, cloudMaterial, cloudMesh;
+            var backgroundGeometry, backgroundMaterial, backgroundMesh;
+
+            var mercuryGeometry, mercuryMaterial, mercuryMesh;
+            var venusGeometry, venusMaterial, venusMesh;
+            var marsGeometry, marsMaterial, marsMesh;
+            var jupiterGeometry, jupiterMaterial, jupiterMesh;
+            var saturnGeometry, saturnMaterial, saturnMesh;
+            var uranusGeometry, uranusMaterial, uranusMesh;
+            var neptuneGeometry, neptuneMaterial, neptuneMesh;
+
+            var earthSystem;
+
+
+            var earthCurve;
+            var mercuryCurve;
+            var venusCurve;
+            var marsCurve;
+            var jupiterCurve;
+            var saturnCurve;
+            var uranusCurve;
+            var neptuneCurve;
+
+            var controls;
+
+            var planetMeshes = [];
+            var orbits = [];
+            
+            function init() {
+                // Initialize scene, camera, and renderer with basic setup
+                scene = new THREE.Scene();
+
+                // Setup perspective camera with a 75-degree field of view, aspect ratio, near and far clipping plane. Position it at (0, 30, 500).
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+                camera.position.set(-100, 1000, 1500);
+                scene.add(camera); // Add camera to the scene
+
+                // Create renderer, set its size and pixel ratio, and append it to the document body
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                document.body.appendChild(renderer.domElement);
+
+                // Texture loader for loading textures
+                const loader = new THREE.TextureLoader();
+
+                // Setup sun with texture, geometry, material, and add it to the scene
+                var sunTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_sun.jpg');
+                sunGeometry = new THREE.SphereGeometry(109, 400, 200);
+                sunMaterial = new THREE.MeshStandardMaterial(
+                    { 
+                        emissive: 0xffd700, 
+                        emissiveMap: sunTexture, 
+                        emissiveIntensity: 1, 
+                        wireframe: false
+                    }
+                );
+                sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+                scene.add(sunMesh); // Add sun mesh to the scene
+
+                // Setup lighting with a point light and ambient light for overall scene illumination
+                var pointLight = new THREE.PointLight(0xffffff, 1, 0);
+                pointLight.position.set(0, 0, 0);
+                scene.add(pointLight);
+                var ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+
+                // Initialize earthSystem as a Group to hold Earth and its moon
+                earthSystem = new THREE.Group();
+
+                // Setup Earth with texture, geometry, material, and add it to the earthSystem
+                var earthTexture = loader.load('https://upload.wikimedia.org/wikipedia/commons/a/ac/Earthmap1000x500.jpg');
+                earthGeometry = new THREE.SphereGeometry(25, 50, 50);
+                earthMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: earthTexture, 
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+                earthSystem.add(earthMesh); // Add Earth mesh to the earthSystem
+
+                // Setup Moon with texture, geometry, material, set its position, and add it to the earthSystem
+                var moonTexture = loader.load('https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_1k.jpg');
+                moonGeometry = new THREE.SphereGeometry(5, 40, 20);
+                moonMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: moonTexture, 
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+                moonMesh.position.set(50, 0, 0); // Position the moon 50 units away from Earth
+                earthSystem.add(moonMesh); // Add Moon mesh to the earthSystem
+                scene.add(earthSystem); // Add earthSystem to the scene
+
+                // Setup clouds with texture, geometry, material, and add them to the earthSystem
+                var cloudTexture = loader.load('https://i.stack.imgur.com/B3c7G.jpg');
+                cloudGeometry = new THREE.SphereGeometry(25.5, 50, 50);
+                cloudMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: cloudTexture,
+                        transparent: true,
+                        opacity: 0.5
+                    }
+                );
+                cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                earthSystem.add(cloudMesh); // Add cloud mesh to the earthSystem for a more realistic Earth appearance
+
+                // Setup Mercury with texture, geometry, material, and add it to the scene
+                var mercuryTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_mercury.jpg');
+                mercuryGeometry = new THREE.SphereGeometry(4.88, 50, 50);
+                mercuryMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: mercuryTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                mercuryMesh = new THREE.Mesh(mercuryGeometry, mercuryMaterial);
+                scene.add(mercuryMesh); // Add Mercury mesh to the scene
+
+                // Setup Venus with texture, geometry, material, and add it to the scene
+                var venusTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_venus_surface.jpg');
+                venusGeometry = new THREE.SphereGeometry(12.1, 50, 50);
+                venusMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: venusTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                venusMesh = new THREE.Mesh(venusGeometry, venusMaterial);
+                scene.add(venusMesh); // Add Venus mesh to the scene
+
+                // Setup Mars with texture, geometry, material, and add it to the scene
+                var marsTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_mars.jpg');
+                marsGeometry = new THREE.SphereGeometry(6.79, 50, 50);
+                marsMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: marsTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                marsMesh = new THREE.Mesh(marsGeometry, marsMaterial);
+                scene.add(marsMesh); // Add Mars mesh to the scene
+
+                // Setup Jupiter with texture, geometry, material, and add it to the scene
+                var jupiterTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_jupiter.jpg');
+                jupiterGeometry = new THREE.SphereGeometry(142.984, 50, 50);
+                jupiterMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: jupiterTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                jupiterMesh = new THREE.Mesh(jupiterGeometry, jupiterMaterial);
+                scene.add(jupiterMesh); // Add Jupiter mesh to the scene
+
+                // Setup Saturn with texture, geometry, material, and add it to the scene
+                var saturnTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_saturn.jpg');
+                saturnGeometry = new THREE.SphereGeometry(120.536, 50, 50);
+                saturnMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: saturnTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                saturnMesh = new THREE.Mesh(saturnGeometry, saturnMaterial);
+                scene.add(saturnMesh); // Add Saturn mesh to the scene
+
+                // Setup Uranus with texture, geometry, material, and add it to the scene
+                var uranusTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_uranus.jpg');
+                uranusGeometry = new THREE.SphereGeometry(51.118, 50, 50);
+                uranusMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: uranusTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                uranusMesh = new THREE.Mesh(uranusGeometry, uranusMaterial);
+                scene.add(uranusMesh); // Add Uranus mesh to the scene
+
+                // Setup Neptune with texture, geometry, material, and add it to the scene
+                var neptuneTexture = loader.load('https://www.solarsystemscope.com/textures/download/2k_neptune.jpg');
+                neptuneGeometry = new THREE.SphereGeometry(49.528, 50, 50);
+                neptuneMaterial = new THREE.MeshPhongMaterial(
+                    {
+                        map: neptuneTexture,
+                        // color: 0x0000ff // Commented out because texture is used instead
+                    }
+                );
+                neptuneMesh = new THREE.Mesh(neptuneGeometry, neptuneMaterial);
+                scene.add(neptuneMesh); // Add Neptune mesh to the scene
+
+                // Setup background with texture to create a starry sky effect, geometry, material, and add it to the scene
+                var backgroundTexture = loader.load('https://www.eso.org/public/archives/images/screen/eso0932a.jpg');
+                backgroundGeometry = new THREE.SphereGeometry(5000, 100, 100);
+                backgroundMaterial = new THREE.MeshBasicMaterial(
+                    {
+                        map: backgroundTexture,
+                        side: THREE.DoubleSide // Visible from inside and outside
+                    }
+                );
+                backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+                scene.add(backgroundMesh); // Add background mesh to the scene for a starry sky background
+
+                // Defines an elliptical orbit for the Earth system using EllipseCurve.
+                // The radii of 300 and 270 are chosen to represent the elliptical nature of Earth's orbit, acknowledging the orbit's eccentricity.
+                // The orbit has been scaled down to fit within the visual field and to make the simulation visually comprehensible.
+                earthCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    600, 540, // xRadius and yRadius represent the scaled-down, elliptical shape of Earth's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                mercuryCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    300, 270, // xRadius and yRadius represent the scaled-down, elliptical shape of Mercury's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                venusCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    400, 360, // xRadius and yRadius represent the scaled-down, elliptical shape of Venus's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                marsCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    800, 720, // xRadius and yRadius represent the scaled-down, elliptical shape of Mars's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                jupiterCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    1120, 1008, // xRadius and yRadius represent the scaled-down, elliptical shape of Jupiter's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                saturnCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    1500, 1350, // xRadius and yRadius represent the scaled-down, elliptical shape of Saturn's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                uranusCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    1800, 1620, // xRadius and yRadius represent the scaled-down, elliptical shape of Uranus's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                neptuneCurve = new THREE.EllipseCurve(
+                    0, 0, // Ellipse center coordinates
+                    2100, 1890, // xRadius and yRadius represent the scaled-down, elliptical shape of Neptune's orbit for visualization.
+                    0, 2 * Math.PI, // Start angle and end angle in radians, completing a full orbit.
+                );
+
+                var points = earthCurve.getPoints(300); // Generate points along the curve
+                var geometry = new THREE.BufferGeometry().setFromPoints(points); // Create geometry from points
+
+
+                var material = new THREE.LineBasicMaterial(
+                    { 
+                        color: 0xffffff, 
+                        transparent: true, 
+                        opacity: 0.5
+                    }
+                );
+                
+                var orbit = new THREE.Line(geometry, material);
+                orbit.rotation.x = Math.PI / 2; // Rotate orbit to lie in the XZ plane
+                scene.add(orbit); // Add orbit line to the scene for visualizing Earth's orbit
+
+                // Setup OrbitControls to allow user interaction with the camera viewpoint
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.autoRotate = true; // Enable auto-rotate feature for dynamic viewing experience
+                function createOrbit(ellipseCurve, scene, color = 0xffffff) {
+                    var points = ellipseCurve.getPoints(300); // 궤도를 이루는 점들을 생성
+                    var geometry = new THREE.BufferGeometry().setFromPoints(points); // 점들로부터 지오메트리 생성
+                    var material = new THREE.LineBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.5
+                    }); // 궤도의 라인 재질 정의
+                    var orbit = new THREE.Line(geometry, material); // 라인 객체 생성
+                    orbit.rotation.x = Math.PI / 2; // 궤도를 XY 평면에 맞춰 회전
+                    scene.add(orbit); // 씬에 궤도 추가
+                    return orbit;
+                }
+
+                // 궤도 생성 함수 호출
+                createOrbit(mercuryCurve, scene);
+                createOrbit(venusCurve, scene);
+                createOrbit(earthCurve, scene);  // Earth orbit already added but redefining using the function for consistency
+                createOrbit(marsCurve, scene);
+                createOrbit(jupiterCurve, scene);
+                createOrbit(saturnCurve, scene);
+                createOrbit(uranusCurve, scene);
+                createOrbit(neptuneCurve, scene);
+
+
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                let currentTimeInSeconds = performance.now() * 0.001;
+                const secondsPerDay = 0.3;
+
+                const earthDayInSeconds = 1 * secondsPerDay;
+                const moonOrbitInSeconds = 27.3 * secondsPerDay;
+                const sunRotationInSeconds = 27 * secondsPerDay;
+                const mercuryRotationInSeconds = 58.6 * secondsPerDay;
+                const venusRotationInSeconds = -243 * secondsPerDay;
+                const marsRotationInSeconds = 1.03 * secondsPerDay;
+                const jupiterRotationInSeconds = 0.41 * secondsPerDay;
+                const saturnRotationInSeconds = 0.45 * secondsPerDay;
+                const uranusRotationInSeconds = 0.72 * secondsPerDay;
+                const neptuneRotationInSeconds = 0.67 * secondsPerDay;
+
+                const earthYearInSeconds = 365.25 * secondsPerDay;
+                const mercuryYearInSeconds = 87.97 * secondsPerDay;
+                const venusYearInSeconds = 224.7 * secondsPerDay;
+                const marsYearInSeconds = 687 * secondsPerDay;
+                const jupiterYearInSeconds = 4332.59 * secondsPerDay;
+                const saturnYearInSeconds = 10759 * secondsPerDay;
+                const uranusYearInSeconds = 30688.5 * secondsPerDay;
+                const neptuneYearInSeconds = 60182 * secondsPerDay;
+                // Update Earth system's position based on its orbit
+                earthSystem.position.set(
+                    earthCurve.getPointAt((currentTimeInSeconds % earthYearInSeconds) / earthYearInSeconds).x, 
+                    0, 
+                    -earthCurve.getPointAt((currentTimeInSeconds % earthYearInSeconds) / earthYearInSeconds).y
+                );
+
+                // Earth's rotation and clouds
+                earthMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / earthDayInSeconds;
+                cloudMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / (earthDayInSeconds * 1.05);
+
+                // Moon's orbit around Earth
+                // Moon's orbit around Earth
+                moonMesh.position.x = 50 * Math.cos((-currentTimeInSeconds * (2 * Math.PI)) / moonOrbitInSeconds);
+                moonMesh.position.z = 50 * Math.sin((-currentTimeInSeconds * (2 * Math.PI)) / moonOrbitInSeconds);
+                moonMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / moonOrbitInSeconds;
+
+                // Sun's rotation
+                sunMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / sunRotationInSeconds;
+
+                // Mercury's rotation
+                mercuryMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / mercuryRotationInSeconds
+
+                // Venus's rotation
+                venusMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / venusRotationInSeconds
+
+                // Mars's rotation
+                marsMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / marsRotationInSeconds
+
+                // Jupiter's rotation
+                jupiterMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / jupiterRotationInSeconds
+
+                // Saturn's rotation
+                saturnMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / saturnRotationInSeconds
+
+                // Uranus's rotation
+                uranusMesh.rotation.x = (currentTimeInSeconds * (2 * Math.PI)) / uranusRotationInSeconds
+
+                // Neptune's rotation
+                neptuneMesh.rotation.y = (currentTimeInSeconds * (2 * Math.PI)) / neptuneRotationInSeconds
+
+                // Update planet positions on their orbits
+                updatePlanetPosition(mercuryMesh, mercuryCurve, mercuryYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(venusMesh, venusCurve, venusYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(marsMesh, marsCurve, marsYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(jupiterMesh, jupiterCurve, jupiterYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(saturnMesh, saturnCurve, saturnYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(uranusMesh, uranusCurve, uranusYearInSeconds, currentTimeInSeconds);
+                updatePlanetPosition(neptuneMesh, neptuneCurve, neptuneYearInSeconds, currentTimeInSeconds);
+
+                renderer.render(scene, camera);
+                earthSystem.position.set(curve.getPointAt((currentTimeInSeconds % earthYearInSeconds) / earthYearInSeconds).x, 0, -curve.getPointAt((currentTimeInSeconds % earthYearInSeconds) / earthYearInSeconds).y); 
+
+                // Initialize the arrow for Uranus's rotation axis
+                var uranusAxisDirection = new THREE.Vector3(0, Math.cos(THREE.MathUtils.degToRad(98)), Math.sin(THREE.MathUtils.degToRad(98))); // 천왕성의 기울기 방향
+                var uranusAxisOrigin = uranusMesh.position; // 천왕성의 중심에서 출발
+                var uranusAxisLength = 50; // 화살표의 길이
+                var uranusAxisColor = 0x3333FF; // 화살표의 색상
+
+                var uranusAxisHelper = new THREE.ArrowHelper(uranusAxisDirection, uranusAxisOrigin, uranusAxisLength, uranusAxisColor);
+                scene.add(uranusAxisHelper); // 씬에 축 헬퍼 추가
+
+            }
+
+            function updatePlanetPosition(planetMesh, orbitCurve, orbitPeriod, currentTime) {
+                const t = (currentTime % orbitPeriod) / orbitPeriod;
+                const position = orbitCurve.getPointAt(t);
+                planetMesh.position.set(position.x, 0, -position.y);
+            }
+
+            
+            init(); // Initializes the scene, camera, renderer, and objects.
+            animate(); // Starts the animation loop.
+
+            function openFAQ() {
+                document.getElementById('faqOverlay').style.display = 'block';
+            }
+
+            function closeFAQ() {
+                document.getElementById('faqOverlay').style.display = 'none';
+            }
+        </script>
+    </body>
+</html>
